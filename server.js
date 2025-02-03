@@ -1,18 +1,27 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
-const fs = require("fs");
-const path = require("path");
 const os = require("os");
+const AWS = require("aws-sdk");
+require("dotenv").config();
 
+const {
+  AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_REGION,
+  AWS_BUCKET_NAME,
+} = process.env;
 const app = express();
 const port = 3000;
 
-const folderPath = path.join(__dirname, "gen");
+// Set up AWS S3 configuration
+AWS.config.update({
+  accessKeyId: AWS_ACCESS_KEY_ID, // replace with your access key
+  secretAccessKey: AWS_SECRET_ACCESS_KEY, // replace with your secret key
+  region: AWS_REGION, // e.g., 'us-east-1'
+});
 
-// Ensure the 'gen' folder exists, create it if it doesn't
-if (!fs.existsSync(folderPath)) {
-  fs.mkdirSync(folderPath);
-}
+const s3 = new AWS.S3();
+
 // Function to generate the PDF using Puppeteer
 async function generatePDF(htmlContent) {
   try {
@@ -47,6 +56,7 @@ app.get("/generate-pdf", async (req, res) => {
         .status(400)
         .send('Missing "title" or "content" query parameter.');
     }
+
     const htmlContent = `
       <html>
         <body>
@@ -57,20 +67,34 @@ app.get("/generate-pdf", async (req, res) => {
         </body>
       </html>
     `;
+
+    // Generate the PDF buffer
     const pdfBuffer = await generatePDF(htmlContent);
 
     const hostname = os.hostname(); // e.g., "Johns-MacBook"
 
-    // Use the hostname to generate a unique file name in the 'gen' folder
-    const filePath = path.join(folderPath, `${hostname}_generated.pdf`);
-    fs.writeFileSync(filePath, pdfBuffer);
+    // Define the S3 file path
+    const fileName = `${hostname}_generated.pdf`;
+    const s3Params = {
+      Bucket: AWS_BUCKET_NAME,
+      Key: `pdfs/${fileName}`, // Store PDFs in a 'pdfs' folder
+      Body: pdfBuffer,
+      ContentType: "application/pdf",
+    };
 
-    // Serve the PDF file
-    res.sendFile(filePath, (err) => {
+    // Upload PDF to S3
+    s3.upload(s3Params, (err, data) => {
       if (err) {
-        console.error("Error sending file:", err);
-        res.status(500).send("Error serving the PDF file.");
+        console.error("Error uploading file to S3:", err);
+        return res.status(500).send("Error uploading PDF to S3.");
       }
+
+      // Return the URL of the uploaded PDF
+      const pdfUrl = data.Location; // The URL of the uploaded file on S3
+      console.log(`File uploaded successfully at ${pdfUrl}`);
+
+      // Respond with the S3 URL (or redirect to it)
+      res.redirect(pdfUrl);
     });
   } catch (error) {
     console.error("Error during PDF generation:", error);
@@ -78,7 +102,7 @@ app.get("/generate-pdf", async (req, res) => {
   }
 });
 
-// Start the Express server
+// Start the server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
