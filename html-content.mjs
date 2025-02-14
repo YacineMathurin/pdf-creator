@@ -1,243 +1,108 @@
-const htmlContent = `
+const htmlContent = (qrCodeDataUrl) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate of Authentication - Republic of Niger</title>
-    <style>
-        body {
-            font-family: 'Times New Roman', Times, serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .certificate {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 50px 80px;
-            background-color: #fff;
-            position: relative;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        .republic-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            margin-bottom: 40px;
-        }
-
-        .flag {
-            width: 60px;
-            height: 40px;
-            background: linear-gradient(
-                to bottom,
-                #E05206 33%, /* Orange */
-                #fff 33% 66%,
-                #0DB02B 66% /* Green */
-            );
-            border: 1px solid #ddd;
-        }
-
-        .republic-info {
-            text-align: left;
-            font-size: 14px;
-            line-height: 1.4;
-            color: #000;
-        }
-
-        .republic-info div:first-child {
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .title {
-            text-align: center;
-            font-size: 36px;
-            color: #E05206; /* Niger flag orange */
-            margin: 20px 0 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 30px;
-        }
-
-        .property-info {
-            margin: 20px 0;
-            padding: 20px;
-            border: 2px solid #ddd;
-        }
-
-        .section-title {
-            font-size: 24px;
-            color: #0DB02B; /* Niger flag green */
-            margin: 0 0 10px 0;
-            border-bottom: 2px solid #0DB02B;
-            padding-bottom: 5px;
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        .signature-section {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 40px;
-            margin-top: 50px;
-        }
-
-        .signature-line {
-            border-top: 2px solid #000;
-            margin-top: 50px;
-            padding-top: 5px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .seal {
-            position: absolute;
-            bottom: 70px;
-            right: 40px;
-            width: 120px;
-            height: 120px;
-            border: 2px solid #E05206;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #E05206;
-            text-align: center;
-            transform: rotate(-15deg);
-        }
-
-        .qr-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            gap: 20px;
-        }
-
-        .qr-code {
-            width: 100px;
-            height: 100px;
-            border: 1px solid #E05206;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f5f5f5;
-        }
-
-        .qr-text {
-            font-size: 12px;
-            color: #666;
-            max-width: 200px;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="certificate">
-        <div class="republic-header">
-            <div class="republic-info">
-                <div>RÉPUBLIQUE DU NIGER</div>
-                <div>MINISTÈRE DE L'URBANISME</div>
-                <div>DÉPARTEMENT D'AUTHENTIFICATION DES PROPRIÉTÉS</div>
-                <div>Document Officiel</div>
+    <div class="max-w-4xl mx-auto  pt-12 px-16 ">
+        <!-- Republic Header -->
+        <div class="mb-6">  
+            <div class="text-left">
+                <div class="font-bold text-lg text-gray-900">RÉPUBLIQUE DU NIGER</div>
+                <div class="text-gray-800">MINISTÈRE DE L'URBANISME</div>
+                <div class="text-gray-800">DÉPARTEMENT D'AUTHENTIFICATION DES PROPRIÉTÉS</div>
+                <div class="text-gray-800">Document Officiel</div>
             </div>
         </div>
 
-        <div class="title">Certificate of Authentication</div>
-        <div class="subtitle">Residential Property Verification</div>
+        <!-- Certificate Title -->
+        <div class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-orange-600 uppercase tracking-wider mb-2">Certificate of Authentication</h1>
+            <div class="text-xl text-gray-600">Residential Property Verification</div>
+        </div>
 
-        <div class="property-info">
-            <div class="section-title">Property Details</div>
-            <div class="details-grid">
+        <!-- Property Details -->
+        <div class="mb-6 border border-gray-200 rounded-lg p-6">
+            <h2 class="text-2xl font-semibold text-green-600 border-b border-green-600 pb-2 mb-4">Property Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <span class="label">Property Address:</span>
-                    <div>123 Example Street, Niamey, Niger</div>
+                    <span class="font-semibold text-gray-700">Property Address:</span>
+                    <div class="text-gray-800">123 Example Street, Niamey, Niger</div>
                 </div>
                 <div>
-                    <span class="label">Year Built:</span>
-                    <div>2010</div>
+                    <span class="font-semibold text-gray-700">Year Built:</span>
+                    <div class="text-gray-800">2010</div>
                 </div>
                 <div>
-                    <span class="label">Square Footage:</span>
-                    <div>2,500 sq ft</div>
+                    <span class="font-semibold text-gray-700">Square Footage:</span>
+                    <div class="text-gray-800">2,500 sq ft</div>
                 </div>
                 <div>
-                    <span class="label">Lot Size:</span>
-                    <div>0.25 acres</div>
+                    <span class="font-semibold text-gray-700">Lot Size:</span>
+                    <div class="text-gray-800">0.25 acres</div>
                 </div>
             </div>
         </div>
 
-        <div class="section-title">Authentication Details</div>
-        <div class="details-grid">
-            <div>
-                <span class="label">Inspection Date:</span>
-                <div>February 14, 2025</div>
+        <!-- Authentication Details -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-green-600 border-b border-green-600 pb-2 mb-4">Authentication Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <span class="font-semibold text-gray-700">Inspection Date:</span>
+                    <div class="text-gray-800">February 14, 2025</div>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-700">Authentication Number:</span>
+                    <div class="text-gray-800">AUTH-2025-0214</div>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-700">Registry Reference:</span>
+                    <div class="text-gray-800">REF-123456</div>
+                </div>
             </div>
-            <div>
-                <span class="label">Authentication Number:</span>
-                <div>AUTH-2025-0214</div>
-            </div>
-            <div>
-                <span class="label">Registry Reference:</span>
-                <div>REF-123456</div>
-            </div>
         </div>
 
-        <div style="margin: 30px 0; line-height: 1.6; text-align: justify;">
-            I, John Smith, holding certification number CERT-789, hereby verify that I have personally inspected the above-mentioned property and confirm its authenticity according to National Property Standards. This certificate is valid for one year from the date of issuance.
+        <!-- Certification Text -->
+        <div class="my-2 text-gray-800 text-justify leading-relaxed">
+            I, John Smith, holding certification number CERT-789, hereby verify that I have personally inspected the above-mentioned property and confirm its authenticity according to National Property Standards.
         </div>
 
-        <div class="signature-section">
-            <div class="signature-line">Authenticator's Signature</div>
-            <div class="signature-line">Official Representative</div>
-        </div>
-
-        <div class="seal">
-            OFFICIAL SEAL<br>
-            Property Auth Dept.<br>
-            2025
-        </div>
-
-        <div class="qr-section">
-            <div class="qr-code">[QR Code]</div>
-            <div class="qr-text">
+        <!-- QR Code Section - Moved above signatures -->
+        <div class="flex items-center justify-center gap-6">
+            <img src="${qrCodeDataUrl}" alt="QR Code" />
+            <div class="text-sm text-gray-600 max-w-xs">
                 Scan this QR code to verify the authenticity of this certificate online at verify.niger-propertyauth.gov
             </div>
         </div>
 
-        <div class="footer">
-            This document is not valid if altered in any way<br>
-            Department of Property Authentication • Niamey, Niger • (+227) 20-XX-XX-XX
+        <!-- Signatures -->
+        <div class="grid grid-cols-2 gap-12 mt-2 mb-16">
+            <div class="text-center">
+                <div class="border-t-2 border-gray-400 pt-2 font-semibold text-gray-700">Authenticator's Signature</div>
+            </div>
+            <div class="text-center">
+                <div class="border-t-2 border-gray-400 pt-2 font-semibold text-gray-700">Official Representative</div>
+            </div>
+        </div>
+
+        <!-- Official Seal -->
+        <div class="absolute bottom-24 right-12 w-32 h-32 border-2 border-orange-600 rounded-full flex items-center justify-center text-center text-orange-600 text-sm transform -rotate-12">
+            <div>
+                OFFICIAL SEAL<br>
+                Property Auth Dept.<br>
+                2025
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-600 mt-20">
+            <div>This document is not valid if altered in any way</div>
+            <div class="mt-1">Department of Property Authentication • Niamey, Niger • (+227) 20-XX-XX-XX</div>
         </div>
     </div>
 </body>
