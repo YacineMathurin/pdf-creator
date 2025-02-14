@@ -1,9 +1,13 @@
 {
+  "type": "module",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.744.0",
     "aws-sdk": "^2.1692.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "nodemon": "^3.1.9",
     "pupeteer": "^0.0.1",
-    "puppeteer": "^24.1.1"
+    "puppeteer": "^24.1.1",
+    "qrcode": "^1.5.4"
   }
 }
