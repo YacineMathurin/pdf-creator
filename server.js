@@ -74,7 +74,9 @@ app.get("/generate-pdf", async (req, res) => {
         .send('Missing "title" or "content" query parameter.');
     }
 
-    const qrCodeDataUrl = await generateQRCode("https://chatgpt.com/");
+    const qrCodeDataUrl = await generateQRCode(
+      "http://property-hub-ne.s3-website.eu-west-3.amazonaws.com/check-it.html"
+    );
 
     // Generate the PDF buffer
     const pdfBuffer = await generatePDF(htmlContent(qrCodeDataUrl));

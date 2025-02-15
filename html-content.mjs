@@ -15,14 +15,13 @@ const htmlContent = (qrCodeDataUrl) => `
                 <div class="font-bold text-lg text-gray-900">RÉPUBLIQUE DU NIGER</div>
                 <div class="text-gray-800">MINISTÈRE DE L'URBANISME</div>
                 <div class="text-gray-800">DÉPARTEMENT D'AUTHENTIFICATION DES PROPRIÉTÉS</div>
-                <div class="text-gray-800">Document Officiel</div>
             </div>
         </div>
 
         <!-- Certificate Title -->
         <div class="text-center mb-6">
-            <h1 class="text-4xl font-bold text-orange-600 uppercase tracking-wider mb-2">Certificate of Authentication</h1>
-            <div class="text-xl text-gray-600">Residential Property Verification</div>
+            <h1 class="text-lg font-bold text-orange-600 uppercase tracking-wider">Certificate of Authentication</h1>
+            <div class="text-gray-600">Residential Property Verification</div>
         </div>
 
         <!-- Property Details -->
@@ -49,7 +48,7 @@ const htmlContent = (qrCodeDataUrl) => `
         </div>
 
         <!-- Authentication Details -->
-        <div class="mb-8">
+        <div class="mb-4">
             <h2 class="text-2xl font-semibold text-green-600 border-b border-green-600 pb-2 mb-4">Authentication Details</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
