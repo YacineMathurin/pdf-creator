@@ -6,6 +6,126 @@ import threading
 import os
 from queue import Queue
 import argparse
+import socket
+import http.server
+import socketserver
+from http import HTTPStatus
+import io
+import base64
+from PIL import Image
+import json
+import urllib.parse
+
+class StreamingHandler(http.server.BaseHTTPRequestHandler):
+    """
+    HTTP handler for streaming video frames
+    """
+    def __init__(self, *args, camera_system=None, **kwargs):
+        self.camera_system = camera_system
+        super().__init__(*args, **kwargs)
+    
+    def do_GET(self):
+        if self.path == '/':
+            # Serve the HTML page with JavaScript for viewing the stream
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            
+            # HTML content with JavaScript for viewing the stream
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Raspberry Pi 360° Camera View</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {{ margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }}
+                    h1 {{ color: #333; }}
+                    #videoContainer {{ width: 100%; max-width: 1000px; overflow: hidden; position: relative; }}
+                    #stream {{ width: 100%; height: auto; }}
+                    .controls {{ margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; width: 100%; max-width: 980px; }}
+                    button {{ margin: 0 5px; padding: 8px 15px; border: none; border-radius: 4px; background: #2196F3; color: white; cursor: pointer; }}
+                    button:hover {{ background: #0b7dda; }}
+                </style>
+            </head>
+            <body>
+                <h1>Raspberry Pi 360° Camera View</h1>
+                <div id="videoContainer">
+                    <img id="stream" src="/stream" alt="360° Camera Stream">
+                </div>
+                <div class="controls">
+                    <button id="startStream">Start Stream</button>
+                    <button id="stopStream">Stop Stream</button>
+                </div>
+                
+                <script>
+                    // Variables to control streaming
+                    let isStreaming = true;
+                    const streamImg = document.getElementById('stream');
+                    let streamUrl = '/mjpeg';
+                    
+                    // Function to start streaming
+                    function startStream() {{
+                        streamImg.src = streamUrl + '?t=' + new Date().getTime();
+                        isStreaming = true;
+                    }}
+                    
+                    // Function to stop streaming
+                    function stopStream() {{
+                        streamImg.src = '';
+                        isStreaming = false;
+                    }}
+                    
+                    // Event listeners for buttons
+                    document.getElementById('startStream').addEventListener('click', startStream);
+                    document.getElementById('stopStream').addEventListener('click', stopStream);
+                    
+                    // Initialize stream
+                    startStream();
+                </script>
+            </body>
+            </html>
+            """
+            self.wfile.write(html.encode('utf-8'))
+            
+        elif self.path.startswith('/mjpeg'):
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+            self.end_headers()
+            try:
+                while True:
+                    if not self.camera_system.running:
+                        break
+                        
+                    # Get the latest frame
+                    frame = None
+                    with self.camera_system.lock:
+                        if self.camera_system.output_frame is not None:
+                            frame = self.camera_system.output_frame.copy()
+                    
+                    if frame is not None:
+                        # Encode frame as JPEG
+                        _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        
+                        # Send frame
+                        self.wfile.write(b"--jpgboundary\r\n")
+                        self.wfile.write(b"Content-Type: image/jpeg\r\n")
+                        self.wfile.write(f"Content-Length: {len(jpeg.tobytes())}\r\n\r\n".encode())
+                        self.wfile.write(jpeg.tobytes())
+                        self.wfile.write(b"\r\n")
+                    
+                    time.sleep(1/25)  # Limit to 25 FPS for streaming
+                    
+            except (BrokenPipeError, ConnectionResetError):
+                # Client disconnected
+                pass
+        else:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            
+    def log_message(self, format, *args):
+        # Suppress log messages for cleaner output
+        pass
+
 
 class Camera360System:
     def __init__(self, num_cameras=8, output_width=1920, output_height=720, 
@@ -44,6 +164,10 @@ class Camera360System:
         
         # Cache for warped frames to reduce computation
         self.warped_frames_cache = {}
+        
+        # Web server for streaming
+        self.web_server = None
+        self.stream_port = 8000
         
     def initialize_cameras(self, camera_sources=None):
         """
@@ -307,15 +431,53 @@ class Camera360System:
         out.release()
         print(f"Video saved to {output_path} ({frames_written} frames)")
     
-    def run(self, display=True, save_video=False, video_path="output_360.mp4", duration=None):
+    def start_streaming_server(self, port=8000):
+        """
+        Start an HTTP server to stream the video to remote devices.
+        
+        Args:
+            port: Port number for the streaming server
+        """
+        self.stream_port = port
+        
+        # Create a custom handler with access to the camera system
+        def handler(*args, **kwargs):
+            StreamingHandler(*args, camera_system=self, **kwargs)
+        
+        # Create and start the HTTP server
+        self.web_server = socketserver.ThreadingTCPServer(("", port), handler)
+        
+        # Get local IP address
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # doesn't have to be reachable
+            s.connect(('10.255.255.255', 1))
+            ip = s.getsockname()[0]
+        except Exception:
+            ip = '127.0.0.1'
+        finally:
+            s.close()
+            
+        print(f"Streaming server started at http://{ip}:{port}")
+        print(f"Access the stream on your phone by entering this URL in your browser: http://{ip}:{port}")
+        
+        # Run the server in a separate thread
+        server_thread = threading.Thread(target=self.web_server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+    
+    def run(self, display=True, save_video=False, video_path="output_360.mp4", 
+            duration=None, stream=True, stream_port=8000):
         """
         Run the 360° camera system.
         
         Args:
-            display: Whether to display the output
+            display: Whether to display the output locally
             save_video: Whether to save video to a file
             video_path: Path to save the video
             duration: Duration in seconds, None for indefinite
+            stream: Whether to stream video over HTTP
+            stream_port: Port for the streaming server
         """
         self.running = True
         threads = []
@@ -346,6 +508,10 @@ class Camera360System:
             video_thread.daemon = True
             video_thread.start()
             threads.append(video_thread)
+            
+        # Start streaming server if requested
+        if stream:
+            self.start_streaming_server(port=stream_port)
         
         try:
             # Keep running until interrupted or duration elapsed
@@ -370,6 +536,11 @@ class Camera360System:
         self.running = False
         time.sleep(0.5)  # Allow threads to terminate
         
+        # Stop the web server if it's running
+        if self.web_server:
+            self.web_server.shutdown()
+            self.web_server.server_close()
+        
         # Release all cameras
         for _, cam in self.cameras:
             cam.release()
@@ -392,6 +563,11 @@ def main():
     parser.add_argument("--cam_height", type=int, default=480, help="Camera height")
     parser.add_argument("--sources", type=str, default=None, 
                         help="Comma-separated list of camera sources")
+    parser.add_argument("--stream", action="store_true", default=True, 
+                        help="Stream video over HTTP")
+    parser.add_argument("--port", type=int, default=8000, help="Streaming server port")
+    parser.add_argument("--no-display", action="store_true", 
+                        help="Disable local display (headless mode)")
     
     args = parser.parse_args()
     
@@ -417,10 +593,12 @@ def main():
     
     # Run the system
     system.run(
-        display=True,
+        display=not args.no_display,
         save_video=args.save,
         video_path=args.output,
-        duration=args.duration
+        duration=args.duration,
+        stream=args.stream,
+        stream_port=args.port
     )
 
 
